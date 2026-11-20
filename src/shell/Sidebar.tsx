@@ -8,6 +8,7 @@ import {
   House,
   Music,
   Settings,
+  Timer,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router'
 import { account, product } from '../content/placeholders.ts'
@@ -15,6 +16,11 @@ import { isMusicRoute, musicPath } from '../music/paths.ts'
 import { ProfileAvatar } from './ProfileAvatar.tsx'
 
 export const proteinCalculatorPath = '/health/protein-calculator'
+export const workTimerPath = '/health/work-timer'
+
+function isHealthRoute(pathname: string) {
+  return pathname === proteinCalculatorPath || pathname === workTimerPath
+}
 
 export function Sidebar({
   hidden,
@@ -24,7 +30,7 @@ export function Sidebar({
   initialEntertainmentOpen?: boolean
 }) {
   const { pathname } = useLocation()
-  const healthForced = pathname === proteinCalculatorPath
+  const healthForced = isHealthRoute(pathname)
   const musicForced = isMusicRoute(pathname)
   const [healthOpen, setHealthOpen] = useState(false)
   const [musicOpen, setMusicOpen] = useState(initialEntertainmentOpen)
@@ -32,7 +38,7 @@ export function Sidebar({
 
   if (trackedPath !== pathname) {
     setTrackedPath(pathname)
-    if (trackedPath === proteinCalculatorPath) setHealthOpen(false)
+    if (isHealthRoute(trackedPath)) setHealthOpen(false)
     if (isMusicRoute(trackedPath)) setMusicOpen(false)
   }
 
@@ -82,6 +88,12 @@ export function Sidebar({
                   <NavLink to={proteinCalculatorPath} className="nav-link nav-child">
                     <Calculator className="nav-icon" aria-hidden="true" />
                     <span>Protein Calculator</span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={workTimerPath} className="nav-link nav-child">
+                    <Timer className="nav-icon" aria-hidden="true" />
+                    <span>Work Timer</span>
                   </NavLink>
                 </li>
               </ul>

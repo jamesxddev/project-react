@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage.tsx'
 import { MusicPage } from './pages/MusicPage.tsx'
 import { MusicSearchPage } from './pages/MusicSearchPage.tsx'
 import { ProteinCalculatorPage } from './pages/ProteinCalculatorPage.tsx'
+import { WorkTimerPage } from './pages/WorkTimerPage.tsx'
 import { AppShell } from './shell/AppShell.tsx'
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="settings" element={<EmptyDestinationPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="health/protein-calculator" element={<ProteinCalculatorPage />} />
+        <Route path="health/work-timer" element={<WorkTimerPage />} />
         <Route path={musicPath.slice(1)} element={<MusicPage />} />
         <Route path={musicSearchPath.slice(1)} element={<MusicSearchPage />} />
         <Route path={`${musicPath.slice(1)}/:playlistId`} element={<MusicPage />} />

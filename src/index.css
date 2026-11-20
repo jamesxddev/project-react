@@ -13,6 +13,11 @@
   --shell-break: 48rem;
   --header-height: 4rem;
   --music-tab-height: 4.25rem;
+  --timer-work: #1f7a4d;
+  --timer-rest: #1d4e89;
+  --timer-work-warn: #1d4e89;
+  --timer-rest-warn: #1f7a4d;
+  --timer-text: #f7f7f4;
 
   color-scheme: dark;
   font: 16px/1.45 system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -33,6 +38,11 @@
   --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
   --hover: var(--page);
   --danger: #9f1239;
+  --timer-work: #1f7a4d;
+  --timer-rest: #1d4e89;
+  --timer-work-warn: #1d4e89;
+  --timer-rest-warn: #1f7a4d;
+  --timer-text: #f7f7f4;
   color-scheme: light;
 }
 
@@ -1402,4 +1412,207 @@ button.nav-link {
 .search-error {
   margin: 0;
   color: var(--text);
+}
+
+.work-timer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: min(100%, 40rem);
+  color: var(--text);
+}
+
+.timer-add,
+.timer-form button,
+.timer-row button,
+.timer-control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.timer-add,
+.timer-control,
+.timer-row button {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
+}
+
+.timer-add {
+  align-self: flex-start;
+}
+
+.timer-section,
+.timer-form,
+.timer-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.timer-section h2,
+.timer-empty,
+.timer-phase,
+.timer-line,
+.timer-status,
+.timer-clock {
+  margin: 0;
+}
+
+.timer-empty {
+  color: var(--muted);
+}
+
+.timer-form,
+.timer-active,
+.timer-row {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.timer-form button {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+}
+
+.timer-form-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.timer-field input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--page);
+  color: var(--text);
+}
+
+.timer-error {
+  color: var(--danger);
+  font-size: 0.875rem;
+}
+
+.timer-active,
+.timer-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  color: var(--text);
+  text-align: left;
+}
+
+.timer-row {
+  list-style: none;
+}
+
+.timer-recent {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.timer-row span {
+  flex: 1;
+}
+
+.shell-body:has(.timer-screen) {
+  padding: 0;
+  overflow: hidden;
+}
+
+.timer-screen {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  height: 100%;
+  min-height: 100%;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--timer-text);
+  background: var(--timer-work);
+}
+
+.timer-screen > :not(.timer-flash) {
+  position: relative;
+  z-index: 1;
+}
+
+.timer-screen[data-phase='rest'] {
+  background: var(--timer-rest);
+}
+
+.timer-phase-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.timer-phase {
+  font-size: 1.5rem;
+  font-weight: 650;
+}
+
+.timer-clock {
+  font-size: clamp(4.5rem, 16vw, 9rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.timer-screen .timer-control {
+  border-color: transparent;
+  background: color-mix(in srgb, white 18%, transparent);
+  color: var(--timer-text);
+}
+
+.timer-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: var(--timer-work-warn);
+  opacity: 0;
+  pointer-events: none;
+  animation: timer-flash 1s ease-in-out 1 both;
+}
+
+.timer-screen[data-phase='rest'] .timer-flash {
+  background: var(--timer-rest-warn);
+}
+
+@keyframes timer-flash {
+  0%,
+  100% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timer-flash {
+    animation: none;
+    opacity: 1;
+  }
 }

@@ -8,6 +8,7 @@ const titles: Record<string, string> = {
   '/settings': 'Settings',
   '/account': 'Account settings',
   '/health/protein-calculator': 'Protein Calculator',
+  '/health/work-timer': 'Work Timer',
   [musicPath]: 'Music',
 }
 

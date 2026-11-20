@@ -57,6 +57,31 @@ describe('Sidebar health menu', () => {
     expect(header).toContain('Protein Calculator')
   })
 
+  it('lists Work Timer under Protein Calculator and titles the header', () => {
+    const html = sidebar('/health/work-timer')
+    const protein = html.indexOf('Protein Calculator')
+    const work = html.indexOf('>Work Timer<')
+    const header = renderToStaticMarkup(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/health/work-timer']}>
+          <Header menuOpen={false} showMenuButton={false} onMenuToggle={() => {}} />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(protein).toBeGreaterThan(-1)
+    expect(work).toBeGreaterThan(protein)
+    expect(html).toContain('href="/health/work-timer"')
+    expect(html).toContain('href="/health/protein-calculator"')
+    expect(html).toContain('nav-child')
+    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('aria-current="page"')
+    expect(header).toContain('Work Timer')
+    expect(sidebarSource).toContain('workTimerPath')
+    expect(sidebarSource).toContain('isHealthRoute(trackedPath)')
+    expect(sidebarSource).toContain('setHealthOpen(false)')
+  })
+
   it('keeps stroke icons, hover scale, and the narrow overlay', () => {
     const appCss = readFileSync(new URL('../index.css', import.meta.url), 'utf8')
     expect(appCss).toContain('stroke: currentColor')
