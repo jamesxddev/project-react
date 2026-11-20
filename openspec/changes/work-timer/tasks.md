@@ -1,0 +1,28 @@
+# Tasks
+
+## 1. Timer rules
+
+- [ ] 1.1 Add `src/health/work-timer.ts` with the recent and active types, `formatClock`, `isWarning`, `tick`, `upsertRecent`, `startPair`, `playRecent`, `pause`, `resume`, `stop`, and whole-minute validation from 1 through 99, using defaults of 30 and 2 minutes as 1800 and 120 seconds, and verify `src/health/work-timer.test.ts` passes `npm test` for `00:03` and `02:00` formatting, a warning only at 3, 2, and 1 seconds, and a playing Work step from 5 seconds to 4 seconds with the warning off
+- [ ] 1.2 Cover the rest of the pure rules in `src/health/work-timer.test.ts`, and verify `npm test` passes for a playing Work step from 1 second to Rest at 120 seconds with the warning off, a playing Rest step from 1 second to Work at the full work length, a 60-second pair resetting to 60, pause keeping the remaining time, resume leaving that time unchanged, stop clearing the active session while keeping the recent row, the default start at Work with 1800 seconds playing, play restarting Work at the full work length, one row per work and rest pair moved to the front, newest-first order, and an eleventh pair dropping the oldest of 10
+
+## 2. Storage
+
+- [ ] 2.1 Add `src/health/work-timer-storage.ts` with the key `work-timer`, `parseWorkTimer`, `loadWorkTimer`, and `saveWorkTimer` on an injectable `getItem` and `setItem`, returning `{ recent: [], active: null }` for missing, unreadable, or wrongly shaped values, and verify `npm test` round-trips a default start as workSeconds 1800, restSeconds 120, phase `work`, remainingSeconds 1800, status `playing`, and ISO timestamps, restores remainingSeconds 100 after a later timestamp without subtracting elapsed time, and keeps the recent row when active is null
+
+## 3. Work Timer page
+
+- [ ] 3.1 Build `src/pages/WorkTimerPage.tsx` so it loads and saves through the storage helper, stacks an add button (`aria-label` "Add timer", plus icon) above Active Timer and Recent Timers, and shows "No timer playing." and "No recent timers." when empty, and verify a static render with an empty memory store shows the plus control first, those two lines, and no timer screen
+- [ ] 3.2 Add the inline create form with controlled Work minutes and Rest minutes defaulting to 30 and 2, validate on Start, set `aria-invalid` and an inline message on an empty, fractional, or out-of-range field, and leave storage unchanged on Cancel, and verify a static render shows the defaults and an invalid start does not write the memory store or open the timer screen
+- [ ] 3.3 Render the active row and recent rows from stored state, using Lucide `Briefcase` and `Footprints`, the clock, the word Paused when paused, and `30:00 work · 02:00 rest` with a play button named "Play", and verify a static render of a playing Work session and a saved default pair shows the phase name, the clock, that recent text, and the play button
+- [ ] 3.4 Add the timer screen inside the same route, filling the page view with one phase icon, the phase name, "Focus on your work." or "Stand up and walk.", and the clock at `clamp(4.5rem, 16vw, 9rem)`, with Pause only while playing, Resume only while paused, and Stop in both, each an icon button with that accessible name, and verify a static render of playing Work at 30:00 shows the work line and Pause and Stop, and a paused Rest at 00:02 shows Resume, Stop, and Paused without a warning class
+- [ ] 3.5 Run a 1000ms interval only while the page is mounted, status is `playing`, and the document is visible, clear it on cleanup and on `visibilitychange` to `hidden`, save the current remaining time, and resume from that saved value without a wall-clock delta, and verify the effect returns a cleanup, hidden visibility does not subtract elapsed time from `remainingSeconds`, and leaving the route does not move the interval into `AppShell`
+
+## 4. Navigation and phase color
+
+- [ ] 4.1 Export `workTimerPath` as `/health/work-timer`, add the `health/work-timer` route to `WorkTimerPage`, map the header title to Work Timer, and list a Lucide `Timer` child directly under Protein Calculator with the existing child link classes, forcing Health open for both Health paths and clearing that open flag when the user leaves them, and verify `src/shell/Sidebar.test.tsx` shows Work Timer indented under Protein Calculator, keeps Health expanded with Work Timer selected on that path, titles the header Work Timer, and still opens Protein Calculator at its current route
+- [ ] 4.2 Add calm work green, rest blue, work-warning red, and rest-warning green variables, plus a light timer text color, on both themes in `src/index.css`, pulse the phase color and the warning color about once per second, and under `prefers-reduced-motion: reduce` hold the warning color with no animation, and verify the stylesheet contains those variables, the pulse, and the reduced-motion rule, and that the list still uses the existing theme tokens
+
+## 5. Check
+
+- [ ] 5.1 Run `npm test` and `npm run build`, and verify the tests pass, `src/main.tsx` still uses `BrowserRouter` and not `HashRouter`, and the build still writes `dist/404.html`
+- [ ] 5.2 In the browser, start the default timer and verify the list order, a 30:00 work screen with a calm green field, a calm red flash at 00:03, a switch to 02:00 rest on calm blue, pause freezing the clock without a flash, resume continuing inside the warning window, stop returning to the list with the pair kept, play restarting Work, a reload keeping the saved remaining time, and light mode, dark mode, and a narrow width keeping the add control on top with the three sections stacked
