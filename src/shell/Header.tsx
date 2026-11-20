@@ -1,3 +1,4 @@
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useLocation } from 'react-router'
 import { isMusicRoute, musicPath, musicSearchPath } from '../music/paths.ts'
 import { ProfileMenu } from './ProfileMenu.tsx'
@@ -13,12 +14,11 @@ const titles: Record<string, string> = {
 }
 
 type HeaderProps = {
-  menuOpen: boolean
-  showMenuButton: boolean
-  onMenuToggle: () => void
+  sidebarHidden: boolean
+  onSidebarToggle: () => void
 }
 
-export function Header({ menuOpen, showMenuButton, onMenuToggle }: HeaderProps) {
+export function Header({ sidebarHidden, onSidebarToggle }: HeaderProps) {
   const { pathname } = useLocation()
   const title =
     pathname === musicSearchPath ? 'Search' : isMusicRoute(pathname) ? 'Music' : (titles[pathname] ?? 'Home')
@@ -26,22 +26,20 @@ export function Header({ menuOpen, showMenuButton, onMenuToggle }: HeaderProps) 
   return (
     <header className="header">
       <div className="header-start">
-        {showMenuButton ? (
-          <button
-            type="button"
-            className="menu-button"
-            aria-expanded={menuOpen}
-            aria-controls="app-sidebar"
-            onClick={onMenuToggle}
-          >
-            <svg className="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M4 7h16M4 12h16M4 17h16" />
-            </svg>
-            <span className="visually-hidden">
-              {menuOpen ? 'Close menu' : 'Open menu'}
-            </span>
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="menu-button"
+          aria-expanded={!sidebarHidden}
+          aria-controls="app-sidebar"
+          onClick={onSidebarToggle}
+        >
+          {sidebarHidden ? (
+            <PanelLeftOpen className="menu-icon" aria-hidden="true" />
+          ) : (
+            <PanelLeftClose className="menu-icon" aria-hidden="true" />
+          )}
+          <span className="visually-hidden">{sidebarHidden ? 'Show sidebar' : 'Hide sidebar'}</span>
+        </button>
         <h1 className="page-title">{title}</h1>
       </div>
       <ProfileMenu />

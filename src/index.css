@@ -129,6 +129,25 @@ a {
   padding: 1.5rem;
 }
 
+.shell[data-sidebar-collapsed='true'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.shell[data-sidebar-collapsed='true'] .sidebar {
+  display: none;
+}
+
+.shell[data-sidebar-collapsed='true'] .header,
+.shell[data-sidebar-collapsed='true'] .shell-body {
+  grid-column: 1;
+}
+
+.shell[data-sidebar-collapsed='true'] .music-tab-bar,
+.shell[data-sidebar-collapsed='true'] .mini-player,
+.shell[data-sidebar-collapsed='true'] .now-playing-sheet {
+  left: 0;
+}
+
 .shell[data-player='true'] .shell-body {
   padding-bottom: calc(4.75rem + env(safe-area-inset-bottom));
 }
@@ -160,7 +179,7 @@ a {
 }
 
 .menu-button {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2.25rem;

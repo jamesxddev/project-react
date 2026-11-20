@@ -58,7 +58,7 @@ describe('music tab bar', () => {
       <MemoryRouter initialEntries={[musicSearchPath]}>
         <ThemeProvider>
           <MusicProvider storage={storage}>
-            <Header menuOpen={false} showMenuButton={false} onMenuToggle={() => undefined} />
+            <Header sidebarHidden={false} onSidebarToggle={() => undefined} />
             <MusicSearchPage recentsStorage={storage} />
             <MusicTabBar />
           </MusicProvider>

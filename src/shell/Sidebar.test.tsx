@@ -45,7 +45,7 @@ describe('Sidebar health menu', () => {
     const header = renderToStaticMarkup(
       <ThemeProvider>
         <MemoryRouter initialEntries={['/health/protein-calculator']}>
-          <Header menuOpen={false} showMenuButton={false} onMenuToggle={() => {}} />
+          <Header sidebarHidden={false} onSidebarToggle={() => {}} />
         </MemoryRouter>
       </ThemeProvider>,
     )
@@ -64,7 +64,7 @@ describe('Sidebar health menu', () => {
     const header = renderToStaticMarkup(
       <ThemeProvider>
         <MemoryRouter initialEntries={['/health/work-timer']}>
-          <Header menuOpen={false} showMenuButton={false} onMenuToggle={() => {}} />
+          <Header sidebarHidden={false} onSidebarToggle={() => {}} />
         </MemoryRouter>
       </ThemeProvider>,
     )
@@ -82,6 +82,28 @@ describe('Sidebar health menu', () => {
     expect(sidebarSource).toContain('setHealthOpen(false)')
   })
 
+  it('offers hide and show for the sidebar', () => {
+    const hidden = renderToStaticMarkup(
+      <ThemeProvider>
+        <MemoryRouter>
+          <Header sidebarHidden onSidebarToggle={() => {}} />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+    const shown = renderToStaticMarkup(
+      <ThemeProvider>
+        <MemoryRouter>
+          <Header sidebarHidden={false} onSidebarToggle={() => {}} />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(hidden).toContain('Show sidebar')
+    expect(hidden).toContain('aria-expanded="false"')
+    expect(shown).toContain('Hide sidebar')
+    expect(shown).toContain('aria-expanded="true"')
+  })
+
   it('keeps stroke icons, hover scale, and the narrow overlay', () => {
     const appCss = readFileSync(new URL('../index.css', import.meta.url), 'utf8')
     expect(appCss).toContain('stroke: currentColor')
@@ -90,7 +112,8 @@ describe('Sidebar health menu', () => {
     expect(appCss).toContain('gap: 0.75rem')
     expect(appCss).not.toMatch(/icon-rail|64px/)
     expect(shellSource).toContain('max-width: 48rem')
-    expect(shellSource).toContain('hidden={narrow && !sidebarOpen}')
+    expect(shellSource).toContain('hidden={sidebarHidden}')
+    expect(shellSource).toContain('data-sidebar-collapsed')
     expect(mainSource).toContain('BrowserRouter')
     expect(mainSource).not.toContain('HashRouter')
   })
@@ -106,7 +129,7 @@ describe('Sidebar health menu', () => {
     const header = renderToStaticMarkup(
       <ThemeProvider>
         <MemoryRouter initialEntries={['/entertainment/music']}>
-          <Header menuOpen={false} showMenuButton={false} onMenuToggle={() => {}} />
+          <Header sidebarHidden={false} onSidebarToggle={() => {}} />
         </MemoryRouter>
       </ThemeProvider>,
     )

@@ -9,36 +9,42 @@ import { useNarrow } from './useNarrow.ts'
 
 export function AppShell() {
   const location = useLocation()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [overlayOpen, setOverlayOpen] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
   const [sidebarPath, setSidebarPath] = useState(location.pathname)
   const narrow = useNarrow('(max-width: 48rem)')
 
   if (sidebarPath !== location.pathname) {
     setSidebarPath(location.pathname)
-    setSidebarOpen(false)
+    setOverlayOpen(false)
   }
 
-  if (!narrow && sidebarOpen) setSidebarOpen(false)
+  if (!narrow && overlayOpen) setOverlayOpen(false)
 
   useEffect(() => {
-    if (!sidebarOpen) return
+    if (!overlayOpen) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSidebarOpen(false)
+      if (event.key === 'Escape') setOverlayOpen(false)
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [sidebarOpen])
+  }, [overlayOpen])
 
-  const overlayOpen = narrow && sidebarOpen
+  const sidebarHidden = narrow ? !overlayOpen : collapsed
+
+  function onSidebarToggle() {
+    if (narrow) setOverlayOpen((open) => !open)
+    else setCollapsed((value) => !value)
+  }
 
   return (
     <MusicProvider>
       <ShellFrame
-        overlayOpen={overlayOpen}
-        narrow={narrow}
-        sidebarOpen={sidebarOpen}
-        onMenuToggle={() => setSidebarOpen((open) => !open)}
-        onClose={() => setSidebarOpen(false)}
+        overlayOpen={narrow && overlayOpen}
+        sidebarHidden={sidebarHidden}
+        collapsed={!narrow && collapsed}
+        onSidebarToggle={onSidebarToggle}
+        onClose={() => setOverlayOpen(false)}
       />
     </MusicProvider>
   )
@@ -46,15 +52,15 @@ export function AppShell() {
 
 function ShellFrame({
   overlayOpen,
-  narrow,
-  sidebarOpen,
-  onMenuToggle,
+  sidebarHidden,
+  collapsed,
+  onSidebarToggle,
   onClose,
 }: {
   overlayOpen: boolean
-  narrow: boolean
-  sidebarOpen: boolean
-  onMenuToggle: () => void
+  sidebarHidden: boolean
+  collapsed: boolean
+  onSidebarToggle: () => void
   onClose: () => void
 }) {
   const { session } = useMusic()
@@ -64,14 +70,15 @@ function ShellFrame({
     <div
       className="shell"
       data-sidebar-open={overlayOpen ? 'true' : 'false'}
+      data-sidebar-collapsed={collapsed ? 'true' : 'false'}
       data-player={session ? 'true' : 'false'}
       data-music-nav={onMusic ? 'true' : 'false'}
     >
-      <Sidebar hidden={narrow && !sidebarOpen} />
+      <Sidebar hidden={sidebarHidden} />
       {overlayOpen ? (
         <button type="button" className="backdrop" aria-label="Close menu" onClick={onClose} />
       ) : null}
-      <Header menuOpen={overlayOpen} showMenuButton={narrow} onMenuToggle={onMenuToggle} />
+      <Header sidebarHidden={sidebarHidden} onSidebarToggle={onSidebarToggle} />
       <main className="shell-body">
         <Outlet />
       </main>
