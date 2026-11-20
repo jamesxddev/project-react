@@ -166,6 +166,7 @@ describe('WorkTimerPage', () => {
     expect(css).toContain('--timer-work-warn: #1d4e89')
     expect(css).toContain('@keyframes timer-flash')
     expect(css).toContain('animation: timer-flash 1s ease-in-out 1 both')
+    expect(css).toContain('transition: background-color 1.6s ease-in-out')
     expect(css).toContain('opacity: 1')
     expect(css).not.toContain('opacity: 0.35')
     expect(css).not.toContain('timer-pulse-work')

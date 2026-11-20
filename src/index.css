@@ -1544,7 +1544,8 @@ button.nav-link {
   padding: 1.5rem;
   text-align: center;
   color: var(--timer-text);
-  background: var(--timer-work);
+  background-color: var(--timer-work);
+  transition: background-color 1.6s ease-in-out;
 }
 
 .timer-screen > :not(.timer-flash) {
@@ -1553,7 +1554,7 @@ button.nav-link {
 }
 
 .timer-screen[data-phase='rest'] {
-  background: var(--timer-rest);
+  background-color: var(--timer-rest);
 }
 
 .timer-phase-icon {
@@ -1611,6 +1612,10 @@ button.nav-link {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .timer-screen {
+    transition: none;
+  }
+
   .timer-flash {
     animation: none;
     opacity: 1;
