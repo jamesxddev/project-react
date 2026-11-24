@@ -1,6 +1,7 @@
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useLocation } from 'react-router'
 import { isMusicRoute, musicPath, musicSearchPath } from '../music/paths.ts'
+import { pickleballPath } from '../pickleball/paths.ts'
 import { ProfileMenu } from './ProfileMenu.tsx'
 
 const titles: Record<string, string> = {
@@ -11,6 +12,7 @@ const titles: Record<string, string> = {
   '/health/protein-calculator': 'Protein Calculator',
   '/health/work-timer': 'Work Timer',
   [musicPath]: 'Music',
+  [pickleballPath]: 'Pickleball',
 }
 
 type HeaderProps = {

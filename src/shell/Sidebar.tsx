@@ -2,6 +2,7 @@ import { useState } from 'react'
 import {
   Calculator,
   ChevronDown,
+  CircleDot,
   Clapperboard,
   Folder,
   HeartPulse,
@@ -13,6 +14,7 @@ import {
 import { NavLink, useLocation } from 'react-router'
 import { account, product } from '../content/placeholders.ts'
 import { isMusicRoute, musicPath } from '../music/paths.ts'
+import { pickleballPath } from '../pickleball/paths.ts'
 import { ProfileAvatar } from './ProfileAvatar.tsx'
 
 export const proteinCalculatorPath = '/health/protein-calculator'
@@ -20,6 +22,10 @@ export const workTimerPath = '/health/work-timer'
 
 function isHealthRoute(pathname: string) {
   return pathname === proteinCalculatorPath || pathname === workTimerPath
+}
+
+function isEntertainmentRoute(pathname: string) {
+  return isMusicRoute(pathname) || pathname === pickleballPath
 }
 
 export function Sidebar({
@@ -31,7 +37,7 @@ export function Sidebar({
 }) {
   const { pathname } = useLocation()
   const healthForced = isHealthRoute(pathname)
-  const musicForced = isMusicRoute(pathname)
+  const musicForced = isEntertainmentRoute(pathname)
   const [healthOpen, setHealthOpen] = useState(false)
   const [musicOpen, setMusicOpen] = useState(initialEntertainmentOpen)
   const [trackedPath, setTrackedPath] = useState(pathname)
@@ -39,7 +45,7 @@ export function Sidebar({
   if (trackedPath !== pathname) {
     setTrackedPath(pathname)
     if (isHealthRoute(trackedPath)) setHealthOpen(false)
-    if (isMusicRoute(trackedPath)) setMusicOpen(false)
+    if (isEntertainmentRoute(trackedPath)) setMusicOpen(false)
   }
 
   const healthExpanded = healthForced || healthOpen
@@ -116,6 +122,12 @@ export function Sidebar({
                   <NavLink to={musicPath} className="nav-link nav-child">
                     <Music className="nav-icon" aria-hidden="true" />
                     <span>Music</span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink to={pickleballPath} className="nav-link nav-child">
+                    <CircleDot className="nav-icon" aria-hidden="true" />
+                    <span>Pickleball</span>
                   </NavLink>
                 </li>
               </ul>

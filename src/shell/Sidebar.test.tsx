@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import mainSource from '../main.tsx?raw'
+import { isMusicRoute } from '../music/paths.ts'
+import { pickleballPath } from '../pickleball/paths.ts'
 import { ThemeProvider } from '../theme/ThemeProvider.tsx'
 import shellSource from './AppShell.tsx?raw'
 import { Header } from './Header.tsx'
@@ -145,5 +147,35 @@ describe('Sidebar health menu', () => {
     expect(sidebarSource).toContain('setMusicOpen((open) => !open)')
     expect(sidebarSource).toContain('if (musicForced) return')
     expect(sidebarSource).not.toContain('HashRouter')
+  })
+
+  it('lists Pickleball under Music and does not treat it as the music screen', () => {
+    const html = sidebar(pickleballPath)
+    const music = html.indexOf('>Music<')
+    const pickleball = html.indexOf('>Pickleball<')
+    const header = renderToStaticMarkup(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={[pickleballPath]}>
+          <Header sidebarHidden={false} onSidebarToggle={() => {}} />
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+    const musicPage = sidebar('/entertainment/music')
+
+    expect(music).toBeGreaterThan(-1)
+    expect(pickleball).toBeGreaterThan(music)
+    expect(html).toContain('href="/entertainment/pickleball"')
+    expect(html).toContain('href="/entertainment/music"')
+    expect(html).toContain('nav-child')
+    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('aria-current="page"')
+    expect(header).toContain('Pickleball')
+    expect(header).not.toContain('>Music<')
+    expect(musicPage).toContain('href="/entertainment/music"')
+    expect(isMusicRoute(pickleballPath)).toBe(false)
+    expect(sidebarSource).toContain('CircleDot')
+    expect(sidebarSource).toContain('pickleballPath')
+    expect(shellSource).toContain('isMusicRoute')
+    expect(shellSource).not.toContain('pickleball')
   })
 })

@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { musicPath, musicSearchPath } from './music/paths.ts'
+import { pickleballPath } from './pickleball/paths.ts'
 import { AccountPage } from './pages/AccountPage.tsx'
 import { EmptyDestinationPage } from './pages/EmptyDestinationPage.tsx'
 import { HomePage } from './pages/HomePage.tsx'
 import { MusicPage } from './pages/MusicPage.tsx'
+import { PickleballPage } from './pages/PickleballPage.tsx'
 import { MusicSearchPage } from './pages/MusicSearchPage.tsx'
 import { ProteinCalculatorPage } from './pages/ProteinCalculatorPage.tsx'
 import { WorkTimerPage } from './pages/WorkTimerPage.tsx'
@@ -22,6 +24,7 @@ export default function App() {
         <Route path={musicPath.slice(1)} element={<MusicPage />} />
         <Route path={musicSearchPath.slice(1)} element={<MusicSearchPage />} />
         <Route path={`${musicPath.slice(1)}/:playlistId`} element={<MusicPage />} />
+        <Route path={pickleballPath.slice(1)} element={<PickleballPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
