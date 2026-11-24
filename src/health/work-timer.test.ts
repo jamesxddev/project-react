@@ -8,16 +8,22 @@ import {
 } from './work-timer-storage.ts'
 import {
   clockShouldRun,
+  deleteRecent,
+  editRecent,
   emptyWorkTimer,
   formatClock,
   isWarning,
   keepRemaining,
+  minuteError,
+  nextPhase,
   pause,
   playRecent,
+  restartPhase,
   resume,
   startPair,
   stop,
   tick,
+  tryEdit,
   type ActiveTimer,
   type WorkTimerState,
 } from './work-timer.ts'
@@ -113,6 +119,93 @@ describe('work timer rules', () => {
     const stopped = stop(started)
     expect(stopped.active).toBeNull()
     expect(stopped.recent).toHaveLength(1)
+  })
+
+  it('restarts the current phase and moves to the other phase at full length', () => {
+    const started = startPair(emptyWorkTimer, { workMinutes: 30, restMinutes: 2 }, T0, () => 'timer-id')
+    const midWork = {
+      ...started,
+      active: { ...started.active!, remainingSeconds: 40, status: 'paused' as const },
+    }
+    expect(restartPhase(midWork, T1).active).toMatchObject({
+      phase: 'work',
+      remainingSeconds: 1800,
+      status: 'paused',
+      updatedAt: T1,
+    })
+
+    const resting = {
+      ...started,
+      active: { ...started.active!, phase: 'rest' as const, remainingSeconds: 15, status: 'playing' as const },
+    }
+    expect(restartPhase(resting, T2).active).toMatchObject({
+      phase: 'rest',
+      remainingSeconds: 120,
+      status: 'playing',
+      updatedAt: T2,
+    })
+
+    expect(nextPhase(midWork, T1).active).toMatchObject({
+      phase: 'rest',
+      remainingSeconds: 120,
+      status: 'paused',
+      updatedAt: T1,
+    })
+    expect(nextPhase(resting, T2).active).toMatchObject({
+      phase: 'work',
+      remainingSeconds: 1800,
+      status: 'playing',
+      updatedAt: T2,
+    })
+    expect(restartPhase(started, T1).recent).toEqual(started.recent)
+    expect(nextPhase({ recent: [], active: null }, T1)).toEqual({ recent: [], active: null })
+  })
+
+  it('deletes a recent row and edits its lengths', () => {
+    let state = startPair(emptyWorkTimer, { workMinutes: 30, restMinutes: 2 }, T0, () => 'timer-a')
+    state = startPair(state, { workMinutes: 10, restMinutes: 1 }, T1, () => 'timer-b')
+    const kept = deleteRecent(state, 'timer-a')
+    expect(kept.recent.map((row) => row.id)).toEqual(['timer-b'])
+    expect(kept.active?.timerId).toBe('timer-b')
+
+    const cleared = deleteRecent(state, 'timer-b')
+    expect(cleared.recent.map((row) => row.id)).toEqual(['timer-a'])
+    expect(cleared.active).toBeNull()
+    expect(deleteRecent(cleared, 'missing')).toEqual(cleared)
+
+    const mid = {
+      ...state,
+      active: { ...state.active!, remainingSeconds: 100 },
+    }
+    const edited = editRecent(mid, 'timer-b', { workMinutes: 20, restMinutes: 3 }, T2)
+    expect(edited.recent[0]).toMatchObject({
+      id: 'timer-b',
+      workSeconds: 1200,
+      restSeconds: 180,
+      lastPlayedAt: T1,
+    })
+    expect(edited.active).toMatchObject({
+      timerId: 'timer-b',
+      phase: 'work',
+      remainingSeconds: 100,
+      status: 'playing',
+    })
+
+    const shortened = editRecent(mid, 'timer-b', { workMinutes: 1, restMinutes: 1 }, T2)
+    expect(shortened.active?.remainingSeconds).toBe(60)
+
+    const fresh = editRecent(state, 'timer-b', { workMinutes: 25, restMinutes: 1 }, T2)
+    expect(fresh.active).toMatchObject({ remainingSeconds: 1500, updatedAt: T2 })
+
+    const merged = editRecent(state, 'timer-b', { workMinutes: 30, restMinutes: 2 }, T2)
+    expect(merged.recent).toHaveLength(1)
+    expect(merged.recent[0].id).toBe('timer-a')
+    expect(merged.active?.timerId).toBe('timer-a')
+
+    const invalid = tryEdit(state, 'timer-b', '', '2', T2)
+    expect(invalid.saved).toBe(false)
+    expect(invalid.state).toEqual(state)
+    expect(invalid.errors.work).toBe(minuteError)
   })
 
   it('keeps one row per pair, newest first, capped at 10', () => {

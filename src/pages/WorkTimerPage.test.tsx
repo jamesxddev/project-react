@@ -75,8 +75,30 @@ describe('WorkTimerPage', () => {
     expect(html).toContain('30:00')
     expect(html).toContain('30:00 work · 02:00 rest')
     expect(html).toContain('aria-label="Play"')
+    expect(html).toContain('aria-label="Edit"')
+    expect(html).toContain('aria-label="Delete"')
+    expect(html.indexOf('aria-label="Play"')).toBeLessThan(html.indexOf('aria-label="Edit"'))
+    expect(html.indexOf('aria-label="Edit"')).toBeLessThan(html.indexOf('aria-label="Delete"'))
+    expect(pageSource).toContain('Pencil')
+    expect(pageSource).toContain('Trash2')
     expect(pageSource).toContain('Briefcase')
     expect(pageSource).toContain('Footprints')
+  })
+
+  it('opens the saved minutes in the edit form', () => {
+    const storage = memory()
+    saveWorkTimer(
+      storage,
+      startPair(emptyWorkTimer, { workMinutes: 25, restMinutes: 5 }, NOW, () => 'timer-id'),
+    )
+    const html = renderToStaticMarkup(
+      <WorkTimerPage storage={storage} initialEditingId="timer-id" />,
+    )
+    expect(html).toContain('Edit timer')
+    expect(html).toContain('value="25"')
+    expect(html).toContain('value="5"')
+    expect(html).toContain('>Save<')
+    expect(html).not.toContain('>Start<')
   })
 
   it('shows the work screen and a paused rest screen without a warning', () => {
@@ -93,7 +115,17 @@ describe('WorkTimerPage', () => {
     expect(playing).toContain('30:00')
     expect(playing).toContain('aria-label="Pause"')
     expect(playing).toContain('aria-label="Stop"')
+    expect(playing).toContain('aria-label="Back"')
+    expect(playing).toContain('aria-label="Restart"')
+    expect(playing).toContain('aria-label="Next"')
+    expect(playing.indexOf('aria-label="Pause"')).toBeLessThan(playing.indexOf('aria-label="Stop"'))
+    expect(playing.indexOf('aria-label="Stop"')).toBeLessThan(playing.indexOf('aria-label="Restart"'))
+    expect(playing.indexOf('aria-label="Restart"')).toBeLessThan(playing.indexOf('aria-label="Next"'))
     expect(playing).not.toContain('aria-label="Resume"')
+    expect(pageSource).toContain('ChevronLeft')
+    expect(pageSource).toContain('RotateCcw')
+    expect(pageSource).toContain('SkipForward')
+    expect(pageSource).toContain("setView('list')")
 
     const started = startPair(emptyWorkTimer, { workMinutes: 30, restMinutes: 2 }, NOW, () => 'timer-id')
     const paused = pause(

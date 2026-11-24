@@ -155,6 +155,54 @@ export function playRecent(state: WorkTimerState, timerId: string, now: string):
   return activate(recent, row.id, row.workSeconds, now)
 }
 
+export function deleteRecent(state: WorkTimerState, timerId: string): WorkTimerState {
+  if (!state.recent.some((row) => row.id === timerId)) return state
+  return {
+    recent: state.recent.filter((row) => row.id !== timerId),
+    active: state.active?.timerId === timerId ? null : state.active,
+  }
+}
+
+function fitRemaining(
+  active: ActiveTimer,
+  previous: { workSeconds: number; restSeconds: number },
+  next: { workSeconds: number; restSeconds: number },
+  now: string,
+  timerId: string,
+): ActiveTimer {
+  const previousLength = phaseLength(active.phase, previous)
+  const nextLength = phaseLength(active.phase, next)
+  const remainingSeconds =
+    active.remainingSeconds === previousLength || active.remainingSeconds > nextLength
+      ? nextLength
+      : active.remainingSeconds
+  return { ...active, timerId, remainingSeconds, updatedAt: now }
+}
+
+export function editRecent(
+  state: WorkTimerState,
+  timerId: string,
+  minutes: { workMinutes: number; restMinutes: number },
+  now: string,
+): WorkTimerState {
+  const current = state.recent.find((row) => row.id === timerId)
+  if (!current) return state
+  const workSeconds = minutes.workMinutes * 60
+  const restSeconds = minutes.restMinutes * 60
+  const nextLengths = { workSeconds, restSeconds }
+  const duplicate = state.recent.find(
+    (row) => row.id !== timerId && row.workSeconds === workSeconds && row.restSeconds === restSeconds,
+  )
+  const recent = duplicate
+    ? state.recent.filter((row) => row.id !== timerId)
+    : state.recent.map((row) => (row.id === timerId ? { ...row, ...nextLengths } : row))
+  const active =
+    state.active?.timerId === timerId
+      ? fitRemaining(state.active, current, nextLengths, now, duplicate?.id ?? timerId)
+      : state.active
+  return { recent, active }
+}
+
 export function pause(state: WorkTimerState, now: string): WorkTimerState {
   if (!state.active || state.active.status !== 'playing') return state
   return { ...state, active: { ...state.active, status: 'paused', updatedAt: now } }
@@ -167,6 +215,66 @@ export function resume(state: WorkTimerState, now: string): WorkTimerState {
 
 export function stop(state: WorkTimerState): WorkTimerState {
   return { ...state, active: null }
+}
+
+function phaseLength(
+  phase: Phase,
+  pair: { workSeconds: number; restSeconds: number },
+): number {
+  return phase === 'work' ? pair.workSeconds : pair.restSeconds
+}
+
+export function tryEdit(
+  state: WorkTimerState,
+  timerId: string,
+  workValue: string,
+  restValue: string,
+  now: string,
+): { state: WorkTimerState; errors: { work: string; rest: string }; saved: boolean } {
+  const work = parseMinutes(workValue)
+  const rest = parseMinutes(restValue)
+  const errors = {
+    work: work.ok ? '' : work.message,
+    rest: rest.ok ? '' : rest.message,
+  }
+  if (!work.ok || !rest.ok) return { state, errors, saved: false }
+  const current = state.recent.find((row) => row.id === timerId)
+  if (!current) return { state, errors, saved: false }
+  return {
+    state: editRecent(state, timerId, { workMinutes: work.minutes, restMinutes: rest.minutes }, now),
+    errors,
+    saved: true,
+  }
+}
+
+export function restartPhase(state: WorkTimerState, now: string): WorkTimerState {
+  if (!state.active) return state
+  const pair = state.recent.find((row) => row.id === state.active?.timerId)
+  if (!pair) return state
+  return {
+    ...state,
+    active: {
+      ...state.active,
+      remainingSeconds: phaseLength(state.active.phase, pair),
+      updatedAt: now,
+    },
+  }
+}
+
+export function nextPhase(state: WorkTimerState, now: string): WorkTimerState {
+  if (!state.active) return state
+  const pair = state.recent.find((row) => row.id === state.active?.timerId)
+  if (!pair) return state
+  const phase: Phase = state.active.phase === 'work' ? 'rest' : 'work'
+  return {
+    ...state,
+    active: {
+      ...state.active,
+      phase,
+      remainingSeconds: phaseLength(phase, pair),
+      updatedAt: now,
+    },
+  }
 }
 
 export function tryStart(

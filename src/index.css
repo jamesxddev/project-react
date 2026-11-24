@@ -1474,6 +1474,7 @@ button.nav-link {
 }
 
 .timer-section h2,
+.timer-form h2,
 .timer-empty,
 .timer-phase,
 .timer-line,
@@ -1531,6 +1532,7 @@ button.nav-link {
 }
 
 .timer-row {
+  flex-wrap: wrap;
   list-style: none;
 }
 
@@ -1543,6 +1545,13 @@ button.nav-link {
 
 .timer-row span {
   flex: 1;
+  min-width: 8rem;
+}
+
+.timer-row-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
 }
 
 .shell-body:has(.timer-screen) {
@@ -1572,6 +1581,13 @@ button.nav-link {
   z-index: 1;
 }
 
+.timer-screen > .timer-back {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 2;
+}
+
 .timer-screen[data-phase='rest'] {
   background-color: var(--timer-rest);
 }
@@ -1595,6 +1611,8 @@ button.nav-link {
 
 .timer-controls {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
 }

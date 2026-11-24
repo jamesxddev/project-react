@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
-import { Briefcase, Footprints, Pause, Play, Plus, Square } from 'lucide-react'
+import { Briefcase, ChevronLeft, Footprints, Pause, Pencil, Play, Plus, RotateCcw, SkipForward, Square, Trash2 } from 'lucide-react'
 import {
   loadWorkTimer,
   saveWorkTimer,
@@ -9,19 +9,23 @@ import {
   clockShouldRun,
   DEFAULT_REST_MINUTES,
   DEFAULT_WORK_MINUTES,
+  deleteRecent,
   emptyActiveCopy,
   emptyRecentCopy,
   formatClock,
   isWarning,
   keepRemaining,
+  nextPhase,
   pause,
   phaseLine,
   phaseName,
   playRecent,
   recentLabel,
+  restartPhase,
   resume,
   stop,
   tick,
+  tryEdit,
   tryStart,
   type Phase,
   type WorkTimerState,
@@ -36,22 +40,39 @@ type FieldErrors = { work: string; rest: string }
 
 const noErrors: FieldErrors = { work: '', rest: '' }
 
+function minutesLabel(totalSeconds: number): string {
+  return String(totalSeconds / 60)
+}
+
 export function WorkTimerPage({
   storage = browserStorage,
   initialFormOpen = false,
   initialView = 'list',
+  initialEditingId = '',
   fieldErrors = noErrors,
 }: {
   storage?: WorkTimerStorage
   initialFormOpen?: boolean
   initialView?: 'list' | 'screen'
+  initialEditingId?: string
   fieldErrors?: FieldErrors
 }) {
   const [state, setState] = useState(() => loadWorkTimer(storage))
   const [view, setView] = useState(initialView)
-  const [formOpen, setFormOpen] = useState(initialFormOpen)
-  const [workMinutes, setWorkMinutes] = useState(String(DEFAULT_WORK_MINUTES))
-  const [restMinutes, setRestMinutes] = useState(String(DEFAULT_REST_MINUTES))
+  const [editingId, setEditingId] = useState<string | null>(initialEditingId || null)
+  const [formOpen, setFormOpen] = useState(initialFormOpen || Boolean(initialEditingId))
+  const [workMinutes, setWorkMinutes] = useState(() => {
+    const row = initialEditingId
+      ? loadWorkTimer(storage).recent.find((item) => item.id === initialEditingId)
+      : undefined
+    return row ? minutesLabel(row.workSeconds) : String(DEFAULT_WORK_MINUTES)
+  })
+  const [restMinutes, setRestMinutes] = useState(() => {
+    const row = initialEditingId
+      ? loadWorkTimer(storage).recent.find((item) => item.id === initialEditingId)
+      : undefined
+    return row ? minutesLabel(row.restSeconds) : String(DEFAULT_REST_MINUTES)
+  })
   const [errors, setErrors] = useState(fieldErrors)
   const [visibility, setVisibility] = useState('visible')
   const stateRef = useRef(state)
@@ -103,20 +124,53 @@ export function WorkTimerPage({
     setView(screen)
   }
 
-  function onStart(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const result = tryStart(state, workMinutes, restMinutes, new Date().toISOString())
-    setErrors(result.errors)
-    if (!result.openScreen) return
+  function closeForm() {
     setFormOpen(false)
-    commit(result.state, 'screen')
-  }
-
-  function onCancel() {
-    setFormOpen(false)
+    setEditingId(null)
     setWorkMinutes(String(DEFAULT_WORK_MINUTES))
     setRestMinutes(String(DEFAULT_REST_MINUTES))
     setErrors(noErrors)
+  }
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const now = new Date().toISOString()
+    if (editingId) {
+      const result = tryEdit(state, editingId, workMinutes, restMinutes, now)
+      setErrors(result.errors)
+      if (!result.saved) return
+      closeForm()
+      commit(result.state, 'list')
+      return
+    }
+    const result = tryStart(state, workMinutes, restMinutes, now)
+    setErrors(result.errors)
+    if (!result.openScreen) return
+    closeForm()
+    commit(result.state, 'screen')
+  }
+
+  function onAdd() {
+    setEditingId(null)
+    setWorkMinutes(String(DEFAULT_WORK_MINUTES))
+    setRestMinutes(String(DEFAULT_REST_MINUTES))
+    setErrors(noErrors)
+    setFormOpen(true)
+  }
+
+  function onEdit(timerId: string) {
+    const row = state.recent.find((item) => item.id === timerId)
+    if (!row) return
+    setEditingId(timerId)
+    setWorkMinutes(minutesLabel(row.workSeconds))
+    setRestMinutes(minutesLabel(row.restSeconds))
+    setErrors(noErrors)
+    setFormOpen(true)
+  }
+
+  function onDelete(timerId: string) {
+    if (editingId === timerId) closeForm()
+    commit(deleteRecent(state, timerId), 'list')
   }
 
   if (view === 'screen' && state.active) {
@@ -130,6 +184,14 @@ export function WorkTimerPage({
         data-warning={warning ? 'true' : 'false'}
       >
         {warning ? <span key={active.remainingSeconds} className="timer-flash" aria-hidden="true" /> : null}
+        <button
+          type="button"
+          className="timer-control timer-back"
+          aria-label="Back"
+          onClick={() => setView('list')}
+        >
+          <ChevronLeft aria-hidden="true" />
+        </button>
         <PhaseIcon className="timer-phase-icon" aria-hidden="true" />
         <p className="timer-phase">{phaseName(active.phase)}</p>
         <p className="timer-line">{phaseLine(active.phase)}</p>
@@ -163,6 +225,22 @@ export function WorkTimerPage({
           >
             <Square aria-hidden="true" />
           </button>
+          <button
+            type="button"
+            className="timer-control"
+            aria-label="Restart"
+            onClick={() => commit(restartPhase(state, new Date().toISOString()), 'screen')}
+          >
+            <RotateCcw aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="timer-control"
+            aria-label="Next"
+            onClick={() => commit(nextPhase(state, new Date().toISOString()), 'screen')}
+          >
+            <SkipForward aria-hidden="true" />
+          </button>
         </div>
       </section>
     )
@@ -174,12 +252,13 @@ export function WorkTimerPage({
         type="button"
         className="timer-add"
         aria-label="Add timer"
-        onClick={() => setFormOpen(true)}
+        onClick={onAdd}
       >
         <Plus aria-hidden="true" />
       </button>
       {formOpen ? (
-        <form className="timer-form" onSubmit={onStart} noValidate>
+        <form className="timer-form" onSubmit={onSubmit} noValidate>
+          {editingId ? <h2>Edit timer</h2> : null}
           <Field
             id="work-minutes"
             label="Work minutes"
@@ -195,8 +274,8 @@ export function WorkTimerPage({
             onChange={setRestMinutes}
           />
           <div className="timer-form-actions">
-            <button type="submit">Start</button>
-            <button type="button" onClick={onCancel}>
+            <button type="submit">{editingId ? 'Save' : 'Start'}</button>
+            <button type="button" onClick={closeForm}>
               Cancel
             </button>
           </div>
@@ -224,9 +303,17 @@ export function WorkTimerPage({
             {state.recent.map((row) => (
               <li key={row.id} className="timer-row">
                 <span>{recentLabel(row)}</span>
-                <button type="button" aria-label="Play" onClick={() => commit(playRecent(state, row.id, new Date().toISOString()), 'screen')}>
-                  <Play aria-hidden="true" />
-                </button>
+                <div className="timer-row-actions">
+                  <button type="button" aria-label="Play" onClick={() => commit(playRecent(state, row.id, new Date().toISOString()), 'screen')}>
+                    <Play aria-hidden="true" />
+                  </button>
+                  <button type="button" aria-label="Edit" onClick={() => onEdit(row.id)}>
+                    <Pencil aria-hidden="true" />
+                  </button>
+                  <button type="button" aria-label="Delete" onClick={() => onDelete(row.id)}>
+                    <Trash2 aria-hidden="true" />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
