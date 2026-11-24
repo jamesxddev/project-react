@@ -50,7 +50,7 @@ describe('WorkTimerPage', () => {
     expect(html).toContain('value="30"')
     expect(html).toContain('value="2"')
 
-    const blocked = tryStart(emptyWorkTimer, '', '2', NOW, () => 'timer-id')
+    const blocked = tryStart(emptyWorkTimer, '', '2', '', NOW, () => 'timer-id')
     expect(blocked.openScreen).toBe(false)
     expect(blocked.state).toEqual(emptyWorkTimer)
     expect(blocked.errors.work).toBe(minuteError)
@@ -99,6 +99,23 @@ describe('WorkTimerPage', () => {
     expect(html).toContain('value="5"')
     expect(html).toContain('>Save<')
     expect(html).not.toContain('>Start<')
+    expect(html).toContain('Description')
+    expect(html).toContain('value=""')
+  })
+
+  it('shows a timer description on the list and the screen', () => {
+    const storage = memory()
+    saveWorkTimer(
+      storage,
+      startPair(emptyWorkTimer, { workMinutes: 30, restMinutes: 2, description: 'Deep work' }, NOW, () => 'timer-id'),
+    )
+    const list = renderToStaticMarkup(<WorkTimerPage storage={storage} />)
+    expect(list).toContain('Deep work')
+    expect(list).toContain('30:00 work · 02:00 rest')
+
+    const screen = renderToStaticMarkup(<WorkTimerPage storage={storage} initialView="screen" />)
+    expect(screen).toContain('class="timer-description"')
+    expect(screen).toContain('Deep work')
   })
 
   it('shows the work screen and a paused rest screen without a warning', () => {
@@ -203,6 +220,9 @@ describe('WorkTimerPage', () => {
     expect(css).not.toContain('opacity: 0.35')
     expect(css).not.toContain('timer-pulse-work')
     expect(css).toContain('prefers-reduced-motion: reduce')
+    expect(css).toContain('.timer-row:hover')
+    expect(css).toContain('.timer-active:hover')
+    expect(css).toContain('.timer-screen .timer-control:hover')
     expect(css).toContain('animation: none')
     expect(css).toContain('font-size: clamp(4.5rem, 16vw, 9rem)')
     const listRule = css.slice(css.indexOf('.work-timer {'), css.indexOf('.work-timer {') + 240)

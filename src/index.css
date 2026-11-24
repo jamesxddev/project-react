@@ -1466,6 +1466,34 @@ button.nav-link {
   align-self: flex-start;
 }
 
+.timer-add,
+.timer-form button,
+.timer-row button,
+.timer-control,
+.timer-active {
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.timer-add:hover,
+.timer-form button:hover,
+.timer-row button:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+
+.timer-form button[type='submit']:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.timer-active:hover,
+.timer-row:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+
 .timer-section,
 .timer-form,
 .timer-field {
@@ -1478,6 +1506,7 @@ button.nav-link {
 .timer-empty,
 .timer-phase,
 .timer-line,
+.timer-description,
 .timer-status,
 .timer-clock {
   margin: 0;
@@ -1543,9 +1572,27 @@ button.nav-link {
   padding: 0;
 }
 
-.timer-row span {
+.timer-row span,
+.timer-copy {
   flex: 1;
   min-width: 8rem;
+}
+
+.timer-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.timer-description {
+  overflow: hidden;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-meta {
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 .timer-row-actions {
@@ -1623,6 +1670,17 @@ button.nav-link {
   color: var(--timer-text);
 }
 
+.timer-screen .timer-control:hover {
+  background: color-mix(in srgb, white 40%, transparent);
+}
+
+.timer-screen .timer-description {
+  max-width: min(36rem, 100%);
+  font-size: 1.125rem;
+  font-weight: 500;
+  white-space: normal;
+}
+
 .timer-flash {
   position: absolute;
   inset: 0;
@@ -1656,5 +1714,14 @@ button.nav-link {
   .timer-flash {
     animation: none;
     opacity: 1;
+  }
+
+  .timer-add,
+  .timer-form button,
+  .timer-row button,
+  .timer-control,
+  .timer-active,
+  .timer-row {
+    transition: none;
   }
 }

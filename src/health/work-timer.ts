@@ -3,6 +3,7 @@ export type Status = 'playing' | 'paused'
 
 export type RecentTimer = {
   id: string
+  description: string
   workSeconds: number
   restSeconds: number
   lastPlayedAt: string
@@ -30,7 +31,9 @@ export const DEFAULT_REST_MINUTES = 2
 export const DEFAULT_WORK_SECONDS = 1800
 export const DEFAULT_REST_SECONDS = 120
 export const RECENT_LIMIT = 10
+export const DESCRIPTION_LIMIT = 80
 export const minuteError = 'Enter a whole number from 1 to 99.'
+export const descriptionError = `Enter a description up to ${DESCRIPTION_LIMIT} characters.`
 export const emptyActiveCopy = 'No timer playing.'
 export const emptyRecentCopy = 'No recent timers.'
 export const workPhaseLine = 'Focus on your work.'
@@ -77,6 +80,12 @@ export function parseMinutes(value: string): MinuteParse {
   return { ok: true, minutes }
 }
 
+export function parseDescription(value: string): { ok: true; description: string } | { ok: false; message: string } {
+  const description = value.trim()
+  if (description.length > DESCRIPTION_LIMIT) return { ok: false, message: descriptionError }
+  return { ok: true, description }
+}
+
 export function tick(
   active: ActiveTimer,
   pair: { workSeconds: number; restSeconds: number },
@@ -102,16 +111,23 @@ function removeOldest(rows: RecentTimer[]): RecentTimer[] {
 
 export function upsertRecent(
   recent: RecentTimer[],
-  pair: { workSeconds: number; restSeconds: number },
+  pair: { workSeconds: number; restSeconds: number; description?: string },
   now: string,
   createId: () => string = () => crypto.randomUUID(),
 ): RecentTimer[] {
   const existing = recent.find(
     (row) => row.workSeconds === pair.workSeconds && row.restSeconds === pair.restSeconds,
   )
+  const description = pair.description !== undefined ? pair.description : (existing?.description ?? '')
   const nextRow: RecentTimer = existing
-    ? { ...existing, lastPlayedAt: now }
-    : { id: createId(), workSeconds: pair.workSeconds, restSeconds: pair.restSeconds, lastPlayedAt: now }
+    ? { ...existing, description, lastPlayedAt: now }
+    : {
+        id: createId(),
+        description,
+        workSeconds: pair.workSeconds,
+        restSeconds: pair.restSeconds,
+        lastPlayedAt: now,
+      }
   const combined = [nextRow, ...recent.filter((row) => row.id !== nextRow.id)]
   const capped = combined.length > RECENT_LIMIT ? removeOldest(combined) : combined
   return capped.sort((a, b) => (a.lastPlayedAt < b.lastPlayedAt ? 1 : a.lastPlayedAt > b.lastPlayedAt ? -1 : 0))
@@ -137,13 +153,18 @@ function activate(
 
 export function startPair(
   state: WorkTimerState,
-  minutes: { workMinutes: number; restMinutes: number },
+  minutes: { workMinutes: number; restMinutes: number; description?: string },
   now: string,
   createId: () => string = () => crypto.randomUUID(),
 ): WorkTimerState {
   const workSeconds = minutes.workMinutes * 60
   const restSeconds = minutes.restMinutes * 60
-  const recent = upsertRecent(state.recent, { workSeconds, restSeconds }, now, createId)
+  const recent = upsertRecent(
+    state.recent,
+    { workSeconds, restSeconds, description: minutes.description?.trim() ?? '' },
+    now,
+    createId,
+  )
   const row = recent[0]
   return activate(recent, row.id, workSeconds, now)
 }
@@ -182,19 +203,22 @@ function fitRemaining(
 export function editRecent(
   state: WorkTimerState,
   timerId: string,
-  minutes: { workMinutes: number; restMinutes: number },
+  minutes: { workMinutes: number; restMinutes: number; description: string },
   now: string,
 ): WorkTimerState {
   const current = state.recent.find((row) => row.id === timerId)
   if (!current) return state
   const workSeconds = minutes.workMinutes * 60
   const restSeconds = minutes.restMinutes * 60
-  const nextLengths = { workSeconds, restSeconds }
+  const description = minutes.description.trim()
+  const nextLengths = { workSeconds, restSeconds, description }
   const duplicate = state.recent.find(
     (row) => row.id !== timerId && row.workSeconds === workSeconds && row.restSeconds === restSeconds,
   )
   const recent = duplicate
-    ? state.recent.filter((row) => row.id !== timerId)
+    ? state.recent
+        .filter((row) => row.id !== timerId)
+        .map((row) => (row.id === duplicate.id ? { ...row, description } : row))
     : state.recent.map((row) => (row.id === timerId ? { ...row, ...nextLengths } : row))
   const active =
     state.active?.timerId === timerId
@@ -229,19 +253,27 @@ export function tryEdit(
   timerId: string,
   workValue: string,
   restValue: string,
+  descriptionValue: string,
   now: string,
-): { state: WorkTimerState; errors: { work: string; rest: string }; saved: boolean } {
+): { state: WorkTimerState; errors: { work: string; rest: string; description: string }; saved: boolean } {
   const work = parseMinutes(workValue)
   const rest = parseMinutes(restValue)
+  const description = parseDescription(descriptionValue)
   const errors = {
     work: work.ok ? '' : work.message,
     rest: rest.ok ? '' : rest.message,
+    description: description.ok ? '' : description.message,
   }
-  if (!work.ok || !rest.ok) return { state, errors, saved: false }
+  if (!work.ok || !rest.ok || !description.ok) return { state, errors, saved: false }
   const current = state.recent.find((row) => row.id === timerId)
   if (!current) return { state, errors, saved: false }
   return {
-    state: editRecent(state, timerId, { workMinutes: work.minutes, restMinutes: rest.minutes }, now),
+    state: editRecent(
+      state,
+      timerId,
+      { workMinutes: work.minutes, restMinutes: rest.minutes, description: description.description },
+      now,
+    ),
     errors,
     saved: true,
   }
@@ -281,20 +313,23 @@ export function tryStart(
   state: WorkTimerState,
   workValue: string,
   restValue: string,
+  descriptionValue: string,
   now: string,
   createId: () => string = () => crypto.randomUUID(),
-): { state: WorkTimerState; errors: { work: string; rest: string }; openScreen: boolean } {
+): { state: WorkTimerState; errors: { work: string; rest: string; description: string }; openScreen: boolean } {
   const work = parseMinutes(workValue)
   const rest = parseMinutes(restValue)
+  const description = parseDescription(descriptionValue)
   const errors = {
     work: work.ok ? '' : work.message,
     rest: rest.ok ? '' : rest.message,
+    description: description.ok ? '' : description.message,
   }
-  if (!work.ok || !rest.ok) return { state, errors, openScreen: false }
+  if (!work.ok || !rest.ok || !description.ok) return { state, errors, openScreen: false }
   return {
     state: startPair(
       state,
-      { workMinutes: work.minutes, restMinutes: rest.minutes },
+      { workMinutes: work.minutes, restMinutes: rest.minutes, description: description.description },
       now,
       createId,
     ),

@@ -7,6 +7,7 @@ import {
 } from '../health/work-timer-storage.ts'
 import {
   clockShouldRun,
+  DESCRIPTION_LIMIT,
   DEFAULT_REST_MINUTES,
   DEFAULT_WORK_MINUTES,
   deleteRecent,
@@ -36,9 +37,9 @@ const browserStorage: WorkTimerStorage = {
   setItem: (key, value) => localStorage.setItem(key, value),
 }
 
-type FieldErrors = { work: string; rest: string }
+type FieldErrors = { work: string; rest: string; description: string }
 
-const noErrors: FieldErrors = { work: '', rest: '' }
+const noErrors: FieldErrors = { work: '', rest: '', description: '' }
 
 function minutesLabel(totalSeconds: number): string {
   return String(totalSeconds / 60)
@@ -72,6 +73,12 @@ export function WorkTimerPage({
       ? loadWorkTimer(storage).recent.find((item) => item.id === initialEditingId)
       : undefined
     return row ? minutesLabel(row.restSeconds) : String(DEFAULT_REST_MINUTES)
+  })
+  const [description, setDescription] = useState(() => {
+    const row = initialEditingId
+      ? loadWorkTimer(storage).recent.find((item) => item.id === initialEditingId)
+      : undefined
+    return row?.description ?? ''
   })
   const [errors, setErrors] = useState(fieldErrors)
   const [visibility, setVisibility] = useState('visible')
@@ -129,6 +136,7 @@ export function WorkTimerPage({
     setEditingId(null)
     setWorkMinutes(String(DEFAULT_WORK_MINUTES))
     setRestMinutes(String(DEFAULT_REST_MINUTES))
+    setDescription('')
     setErrors(noErrors)
   }
 
@@ -136,14 +144,14 @@ export function WorkTimerPage({
     event.preventDefault()
     const now = new Date().toISOString()
     if (editingId) {
-      const result = tryEdit(state, editingId, workMinutes, restMinutes, now)
+      const result = tryEdit(state, editingId, workMinutes, restMinutes, description, now)
       setErrors(result.errors)
       if (!result.saved) return
       closeForm()
       commit(result.state, 'list')
       return
     }
-    const result = tryStart(state, workMinutes, restMinutes, now)
+    const result = tryStart(state, workMinutes, restMinutes, description, now)
     setErrors(result.errors)
     if (!result.openScreen) return
     closeForm()
@@ -154,6 +162,7 @@ export function WorkTimerPage({
     setEditingId(null)
     setWorkMinutes(String(DEFAULT_WORK_MINUTES))
     setRestMinutes(String(DEFAULT_REST_MINUTES))
+    setDescription('')
     setErrors(noErrors)
     setFormOpen(true)
   }
@@ -164,6 +173,7 @@ export function WorkTimerPage({
     setEditingId(timerId)
     setWorkMinutes(minutesLabel(row.workSeconds))
     setRestMinutes(minutesLabel(row.restSeconds))
+    setDescription(row.description)
     setErrors(noErrors)
     setFormOpen(true)
   }
@@ -176,6 +186,7 @@ export function WorkTimerPage({
   if (view === 'screen' && state.active) {
     const active = state.active
     const warning = active.status === 'playing' && isWarning(active.remainingSeconds)
+    const descriptionText = state.recent.find((row) => row.id === active.timerId)?.description ?? ''
     const PhaseIcon = active.phase === 'work' ? Briefcase : Footprints
     return (
       <section
@@ -195,6 +206,7 @@ export function WorkTimerPage({
         <PhaseIcon className="timer-phase-icon" aria-hidden="true" />
         <p className="timer-phase">{phaseName(active.phase)}</p>
         <p className="timer-line">{phaseLine(active.phase)}</p>
+        {descriptionText ? <p className="timer-description">{descriptionText}</p> : null}
         <p className="timer-clock">{formatClock(active.remainingSeconds)}</p>
         {active.status === 'paused' ? <p className="timer-status">Paused</p> : null}
         <div className="timer-controls">
@@ -246,6 +258,10 @@ export function WorkTimerPage({
     )
   }
 
+  const activeDescription = state.active
+    ? (state.recent.find((row) => row.id === state.active?.timerId)?.description ?? '')
+    : ''
+
   return (
     <section className="work-timer">
       <button
@@ -259,6 +275,14 @@ export function WorkTimerPage({
       {formOpen ? (
         <form className="timer-form" onSubmit={onSubmit} noValidate>
           {editingId ? <h2>Edit timer</h2> : null}
+          <Field
+            id="timer-description"
+            label="Description"
+            value={description}
+            error={errors.description}
+            onChange={setDescription}
+            type="text"
+          />
           <Field
             id="work-minutes"
             label="Work minutes"
@@ -286,9 +310,15 @@ export function WorkTimerPage({
         {state.active ? (
           <button type="button" className="timer-active" onClick={() => setView('screen')}>
             <PhaseMark phase={state.active.phase} />
-            <span>{phaseName(state.active.phase)}</span>
-            <span>{formatClock(state.active.remainingSeconds)}</span>
-            {state.active.status === 'paused' ? <span>Paused</span> : null}
+            <span className="timer-copy">
+              {activeDescription ? <span className="timer-description">{activeDescription}</span> : null}
+              <span>
+                {phaseName(state.active.phase)}
+                {' · '}
+                {formatClock(state.active.remainingSeconds)}
+                {state.active.status === 'paused' ? ' · Paused' : ''}
+              </span>
+            </span>
           </button>
         ) : (
           <p className="timer-empty">{emptyActiveCopy}</p>
@@ -302,7 +332,10 @@ export function WorkTimerPage({
           <ul className="timer-recent">
             {state.recent.map((row) => (
               <li key={row.id} className="timer-row">
-                <span>{recentLabel(row)}</span>
+                <span className="timer-copy">
+                  {row.description ? <span className="timer-description">{row.description}</span> : null}
+                  <span className={row.description ? 'timer-meta' : undefined}>{recentLabel(row)}</span>
+                </span>
                 <div className="timer-row-actions">
                   <button type="button" aria-label="Play" onClick={() => commit(playRecent(state, row.id, new Date().toISOString()), 'screen')}>
                     <Play aria-hidden="true" />
@@ -334,23 +367,28 @@ function Field({
   value,
   error,
   onChange,
+  type = 'number',
 }: {
   id: string
   label: string
   value: string
   error: string
   onChange: (value: string) => void
+  type?: 'number' | 'text'
 }) {
+  const numeric = type === 'number'
   return (
     <label className="timer-field" htmlFor={id}>
       <span>{label}</span>
       <input
         id={id}
-        type="number"
-        inputMode="numeric"
-        min={1}
-        max={99}
-        step={1}
+        type={type}
+        inputMode={numeric ? 'numeric' : 'text'}
+        min={numeric ? 1 : undefined}
+        max={numeric ? 99 : undefined}
+        maxLength={numeric ? undefined : DESCRIPTION_LIMIT}
+        step={numeric ? 1 : undefined}
+        placeholder={numeric ? undefined : 'What is this timer for?'}
         value={value}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : undefined}

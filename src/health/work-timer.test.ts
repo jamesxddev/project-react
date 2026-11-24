@@ -9,6 +9,7 @@ import {
 import {
   clockShouldRun,
   deleteRecent,
+  descriptionError,
   editRecent,
   emptyWorkTimer,
   formatClock,
@@ -24,6 +25,7 @@ import {
   stop,
   tick,
   tryEdit,
+  tryStart,
   type ActiveTimer,
   type WorkTimerState,
 } from './work-timer.ts'
@@ -177,9 +179,10 @@ describe('work timer rules', () => {
       ...state,
       active: { ...state.active!, remainingSeconds: 100 },
     }
-    const edited = editRecent(mid, 'timer-b', { workMinutes: 20, restMinutes: 3 }, T2)
+    const edited = editRecent(mid, 'timer-b', { workMinutes: 20, restMinutes: 3, description: 'Deep work' }, T2)
     expect(edited.recent[0]).toMatchObject({
       id: 'timer-b',
+      description: 'Deep work',
       workSeconds: 1200,
       restSeconds: 180,
       lastPlayedAt: T1,
@@ -191,21 +194,37 @@ describe('work timer rules', () => {
       status: 'playing',
     })
 
-    const shortened = editRecent(mid, 'timer-b', { workMinutes: 1, restMinutes: 1 }, T2)
+    const shortened = editRecent(mid, 'timer-b', { workMinutes: 1, restMinutes: 1, description: '' }, T2)
     expect(shortened.active?.remainingSeconds).toBe(60)
 
-    const fresh = editRecent(state, 'timer-b', { workMinutes: 25, restMinutes: 1 }, T2)
+    const fresh = editRecent(state, 'timer-b', { workMinutes: 25, restMinutes: 1, description: '' }, T2)
     expect(fresh.active).toMatchObject({ remainingSeconds: 1500, updatedAt: T2 })
 
-    const merged = editRecent(state, 'timer-b', { workMinutes: 30, restMinutes: 2 }, T2)
+    const merged = editRecent(state, 'timer-b', { workMinutes: 30, restMinutes: 2, description: 'Email' }, T2)
     expect(merged.recent).toHaveLength(1)
     expect(merged.recent[0].id).toBe('timer-a')
+    expect(merged.recent[0].description).toBe('Email')
     expect(merged.active?.timerId).toBe('timer-a')
 
-    const invalid = tryEdit(state, 'timer-b', '', '2', T2)
+    const invalid = tryEdit(state, 'timer-b', '', '2', '', T2)
     expect(invalid.saved).toBe(false)
     expect(invalid.state).toEqual(state)
     expect(invalid.errors.work).toBe(minuteError)
+  })
+
+  it('stores a trimmed description and rejects one past the limit', () => {
+    const started = startPair(
+      emptyWorkTimer,
+      { workMinutes: 30, restMinutes: 2, description: '  Deep work  ' },
+      T0,
+      () => 'timer-id',
+    )
+    expect(started.recent[0].description).toBe('Deep work')
+
+    const blocked = tryStart(emptyWorkTimer, '30', '2', 'x'.repeat(81), T0, () => 'timer-id')
+    expect(blocked.openScreen).toBe(false)
+    expect(blocked.errors.description).toBe(descriptionError)
+    expect(blocked.state).toEqual(emptyWorkTimer)
   })
 
   it('keeps one row per pair, newest first, capped at 10', () => {
@@ -291,6 +310,21 @@ describe('work timer storage', () => {
     expect(parseWorkTimer(null)).toEqual(emptyWorkTimer)
     expect(parseWorkTimer('{')).toEqual(emptyWorkTimer)
     expect(parseWorkTimer(JSON.stringify({ recent: {}, active: null }))).toEqual(emptyWorkTimer)
+    const legacy = parseWorkTimer(
+      JSON.stringify({
+        recent: [{ id: 'timer-id', workSeconds: 1800, restSeconds: 120, lastPlayedAt: T0 }],
+        active: null,
+      }),
+    )
+    expect(legacy.recent[0].description).toBe('')
+    expect(
+      parseWorkTimer(
+        JSON.stringify({
+          recent: [{ id: 'timer-id', workSeconds: 1800, restSeconds: 120, lastPlayedAt: T0, description: 4 }],
+          active: null,
+        }),
+      ),
+    ).toEqual(emptyWorkTimer)
     expect(loadWorkTimer(memory())).toEqual(emptyWorkTimer)
     const throwing: WorkTimerStorage = {
       getItem: () => {
